@@ -1,79 +1,156 @@
 package com.example.roy.myapplication;
 
+import android.app.Dialog;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
+import android.text.Html;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Base64;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Button;
 
+import com.facebook.AccessToken;
+import com.facebook.CallbackManager;
 import com.facebook.login.LoginManager;
+import com.facebook.FacebookCallback;
+import com.facebook.FacebookException;
+import com.facebook.FacebookSdk;
+import com.facebook.GraphRequest;
+import com.facebook.GraphResponse;
+import com.facebook.login.LoginResult;
+import com.facebook.login.widget.LoginButton;
+import com.facebook.login.widget.ProfilePictureView;
 import com.facebook.share.model.ShareLinkContent;
 import com.facebook.share.widget.ShareDialog;
 
-public class MainActivity extends AppCompatActivity {
+import org.json.JSONException;
+import org.json.JSONObject;
 
-    private ShareDialog mShareDialog;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
+
+public class MainActivity extends AppCompatActivity {
+    CallbackManager callbackManager;
+    Button share,details;
+    ShareDialog shareDialog;
+    LoginButton login;
+    ProfilePictureView profile;
+    Dialog details_dialog;
+    TextView details_txt;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+
+
         super.onCreate(savedInstanceState);
+        FacebookSdk.sdkInitialize(getApplicationContext());
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
-        Bundle inBundle = getIntent().getExtras();
-        String name = inBundle.get("name").toString();
-        String surname = inBundle.get("surname").toString();
-        String imageUrl = inBundle.get("imageUrl").toString();
+        callbackManager = CallbackManager.Factory.create();
+        login = (LoginButton)findViewById(R.id.login_button);
 
-        TextView nameView = (TextView)findViewById(R.id.nameAndSurname);
-        nameView.setText(""+name+" "+surname);
+        shareDialog = new ShareDialog(this);
+        share = (Button)findViewById(R.id.share);
+        details = (Button)findViewById(R.id.details);
+        login.setReadPermissions("public_profile email");
+        share.setVisibility(View.INVISIBLE);
+        details.setVisibility(View.INVISIBLE);
+        details_dialog = new Dialog(this);
+        details_dialog.setContentView(R.layout.dialog_details);
+        details_dialog.setTitle("Details");
+        details_txt = (TextView)details_dialog.findViewById(R.id.details);
+        details.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                details_dialog.show();
+            }
+        });
 
-        mShareDialog = new ShareDialog(this);
-        new DownloadImage((ImageView) findViewById(R.id.profileImage)).execute(imageUrl);
-
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
+        if(AccessToken.getCurrentAccessToken() != null){
+            RequestData();
+            share.setVisibility(View.VISIBLE);
+            details.setVisibility(View.VISIBLE);
+        }
+        login.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(AccessToken.getCurrentAccessToken() != null) {
+                    share.setVisibility(View.INVISIBLE);
+                    details.setVisibility(View.INVISIBLE);
+                    profile.setProfileId(null);
+                }
+            }
+        });
+        share.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 ShareLinkContent content = new ShareLinkContent.Builder().build();
-                mShareDialog.show(content);
+                shareDialog.show(content);
+
             }
         });
+        login.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+            @Override
+            public void onSuccess(LoginResult loginResult) {
+
+                if(AccessToken.getCurrentAccessToken() != null){
+                    RequestData();
+                    share.setVisibility(View.VISIBLE);
+                    details.setVisibility(View.VISIBLE);
+                }
+            }
+
+            @Override
+            public void onCancel() {
+
+            }
+
+            @Override
+            public void onError(FacebookException exception) {
+            }
+        });
+
+    }
+    public void RequestData(){
+        GraphRequest request = GraphRequest.newMeRequest(AccessToken.getCurrentAccessToken(), new GraphRequest.GraphJSONObjectCallback() {
+            @Override
+            public void onCompleted(JSONObject object,GraphResponse response) {
+
+                JSONObject json = response.getJSONObject();
+                try {
+                    if(json != null){
+                        String text = "<b>Name :</b> "+json.getString("name")+"<br><br><b>Email :</b> "+json.getString("email")+"<br><br><b>Profile link :</b> "+json.getString("link");
+                        details_txt.setText(Html.fromHtml(text));
+                        profile.setProfileId(json.getString("id"));
+                    }
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        Bundle parameters = new Bundle();
+        parameters.putString("fields", "id,name,link,email,picture");
+        request.setParameters(parameters);
+        request.executeAsync();
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_login, menu);
-        return true;
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        callbackManager.onActivityResult(requestCode, resultCode, data);
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            logout();
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    public void logout(){
-        LoginManager.getInstance().logOut();
-        Intent login = new Intent(MainActivity.this, LoginActivity.class);
-        startActivity(login);
-        finish();
-    }
 }
