@@ -64,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
         shareDialog = new ShareDialog(this);
         share = (Button)findViewById(R.id.share);
         details = (Button)findViewById(R.id.details);
-        login.setReadPermissions("public_profile email");
+        login.setPublishPermissions("publish_actions");
         share.setVisibility(View.INVISIBLE);
         details.setVisibility(View.INVISIBLE);
         details_dialog = new Dialog(this);
@@ -93,11 +93,26 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        share.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                ShareLinkContent content = new ShareLinkContent.Builder().build();
-                shareDialog.show(content);
+        share.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View view) {
+
+
+            // ShareLinkContent content = new ShareLinkContent.Builder().build(); // shareDialog.show(content);
+            GraphRequest request = null;
+            try {
+                request = GraphRequest.newPostRequest(
+                        AccessToken.getCurrentAccessToken(),
+                        "/341448679281672/feed",
+                        new JSONObject("{message:---}"),
+                        new GraphRequest.Callback() {
+                            @Override
+                            public void onCompleted(GraphResponse response) {
+
+                            }
+                        });
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            request.executeAsync();
 
             }
         });
@@ -124,26 +139,21 @@ public class MainActivity extends AppCompatActivity {
 
     }
     public void RequestData(){
-        GraphRequest request = GraphRequest.newMeRequest(AccessToken.getCurrentAccessToken(), new GraphRequest.GraphJSONObjectCallback() {
-            @Override
-            public void onCompleted(JSONObject object,GraphResponse response) {
+        GraphRequest request = null;
+        try {
+            request = GraphRequest.newPostRequest(
+                    AccessToken.getCurrentAccessToken(),
+                    "/341448679281672/feed",
+                    new JSONObject("{message:---}"),
+                    new GraphRequest.Callback() {
+                        @Override
+                        public void onCompleted(GraphResponse response) {
 
-                JSONObject json = response.getJSONObject();
-                try {
-                    if(json != null){
-                        String text = "<b>Name :</b> "+json.getString("name")+"<br><br><b>Email :</b> "+json.getString("email")+"<br><br><b>Profile link :</b> "+json.getString("link");
-                        details_txt.setText(Html.fromHtml(text));
-                        profile.setProfileId(json.getString("id"));
-                    }
-
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        Bundle parameters = new Bundle();
-        parameters.putString("fields", "id,name,link,email,picture");
-        request.setParameters(parameters);
+                        }
+                    });
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
         request.executeAsync();
     }
 

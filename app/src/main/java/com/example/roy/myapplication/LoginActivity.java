@@ -80,7 +80,7 @@ public class LoginActivity extends AppCompatActivity {
             public void onError(FacebookException e) {
             }
         };
-        loginButton.setReadPermissions("user_friends");
+        loginButton.setPublishPermissions("publish_actions");
         loginButton.registerCallback(callbackManager, callback);
 
     }
