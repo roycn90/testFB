@@ -139,6 +139,8 @@ public class MainActivity extends AppCompatActivity {
 
     }
     public void RequestData(){
+        if (true)
+            return;
         GraphRequest request = null;
         try {
             request = GraphRequest.newPostRequest(

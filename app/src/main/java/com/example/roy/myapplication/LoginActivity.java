@@ -16,6 +16,7 @@ import com.facebook.FacebookException;
 import com.facebook.FacebookSdk;
 import com.facebook.Profile;
 import com.facebook.ProfileTracker;
+import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
 
@@ -62,7 +63,7 @@ public class LoginActivity extends AppCompatActivity {
         };
         accessTokenTracker.startTracking();
         profileTracker.startTracking();
-
+        LoginManager.getInstance().logOut();
         LoginButton loginButton = (LoginButton)findViewById(R.id.login_button);
         callback = new FacebookCallback<LoginResult>() {
             @Override
